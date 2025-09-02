@@ -177,7 +177,8 @@ if base1 is not None and base2 is not None:
     # --- Visualizações Aprimoradas ---
     st.subheader("Análises Visuais Aprofundadas")
     
-    tab1, tab2, tab3 = st.tabs([" Saúde Financeira e Risco", "Análise B2B", "Análise por Setor (CNAE)"])
+    # ADICIONADA NOVA ABA PARA OPORTUNIDADES
+    tab1, tab2, tab3, tab4 = st.tabs([" Saúde Financeira e Risco", "Análise B2B", "Análise por Setor (CNAE)", "💡 Análise de Oportunidades"])
     
     with tab1:
         col1, col2 = st.columns([1, 2])
@@ -186,7 +187,6 @@ if base1 is not None and base2 is not None:
             saude_counts = filtered_df['Saude_Financeira'].value_counts().reset_index()
             saude_counts.columns = ['Saude_Financeira', 'count']
 
-            # ATUALIZAÇÃO: Mapa de cores e legenda refletem a nova lógica
             color_map = {
                 'Saudável': '#2E8B57',
                 'Alavancagem Estratégica': '#4682B4',
@@ -241,9 +241,28 @@ if base1 is not None and base2 is not None:
         else:
             st.warning("Não há dados para esta visualização com os filtros selecionados.")
             
+    # ALTERAÇÃO: Troca de Sunburst por Treemap para melhor visualização
+    with tab4:
+        st.write('**Mapa de Oportunidades de Crédito**')
+        st.markdown("Este mapa mostra a concentração de empresas com perfil ideal para crédito. O tamanho de cada retângulo representa o volume de oportunidades.")
+        
+        if not oportunidades.empty:
+            # Usando Treemap
+            fig_treemap = px.treemap(
+                oportunidades,
+                path=[px.Constant("Todas as Oportunidades"), 'DS_CNAE', 'Perfil_da_Empresa'],
+                title='Concentração de Oportunidades por Setor e Perfil',
+                color='DS_CNAE',
+                hover_data=['VL_FATU']
+            )
+            fig_treemap.update_layout(margin = dict(t=50, l=25, r=25, b=25))
+            st.plotly_chart(fig_treemap, use_container_width=True)
+        else:
+            st.warning("Nenhuma oportunidade de crédito encontrada com os filtros atuais.")
+            
     st.markdown("---")
     
-    # --- NOVA SEÇÃO: Análise de Risco na Cadeia de Valor ---
+    # --- ANÁLISE DE RISCO NA CADEIA DE VALOR ---
     st.subheader("🔗 Análise de Risco na Cadeia de Valor")
     st.markdown("Selecione uma empresa para analisar a saúde financeira de seus principais clientes e fornecedores.")
 
@@ -320,6 +339,7 @@ if base1 is not None and base2 is not None:
         inicio_op = st.session_state.pagina_oportunidades * linhas_por_pagina_op
         fim_op = inicio_op + linhas_por_pagina_op
 
+        # CORREÇÃO APLICADA AQUI: O .style.format() é chamado no dataframe já paginado
         df_oportunidade_paginado = oportunidades[cols_display].iloc[inicio_op:fim_op]
         st.dataframe(df_oportunidade_paginado.style.format({"VL_FATU": "R$ {:,.2f}", "VL_SLDO": "R$ {:,.2f}"}), use_container_width=True)
     else:
