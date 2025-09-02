@@ -1,0 +1,15 @@
+Base 1,Variável,Nome Lógico,Tipo,Especificações
+,ID,Número do Registro do cliente,String,10 mil IDs distintos. Completamente anonimizados.
+,VL_FATU,Valor do Faturamento,Long,"Valor do faturamento anual da empresa, de 0 a 300 milhões. Valores mascarados, mantendo exclusivamente a ordenação dos faturamentos das empresas"
+,VL_SLDO,Valor do Saldo em Conta corrente na data de referência,Long,"Valor do saldo em conta corrente no dia de fechamento do mês. Valores mascarados, mantendo exclusivamente características anonimizadas de escala e valores positivos e negativos."
+,DT_ABRT,Data de abertura da empresa,Date,"Data de abertura das empresas. Valor de dia e mês mascarados, podendo variar 10 dias para frente ou para trás e 3 meses para frente ou para trás."
+,DS_CNAE,Descrição do CNAE,String,"Nome lógico do CNAE da empresa, utilizando as especificações do site público do governo: https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/cnpj/classificacao-nacional-de-atividades-economicas-2013-cnae"
+,DT_REFE,Data de referência da Base,Date,Data de referência da base. São os últimos dias de 5 meses de janeiro a maio de 2025. Valores finais com range de 5 dias para frente ou para trás.
+,,,,
+,,,,
+Base 2,Variável,Nome Lógico,Tipo,Especificações
+,ID_PGTO,ID do cliente que enviou o valor,String,"ID do pagador, ou seja, a origem da transação, de onde sai o dinheiro. O pagador tem como atribuição realizar o pagamento. Contém somente IDs da 1º tabela."
+,ID_RCBE,ID do cliente que recebeu o valor,String,"ID do recebedor, ou seja, quem receptará a transação, para onde vai o dinheiro. O recebedor tem como atribuição receber o pagamento. Contém somente IDs da 1º tabela"
+,VL,Valor transacionado,Long,"Valor transacionado. Valores mascarados, mantendo exclusivamente características anonimizadas de escala. Contém somente valores absolutos. Todo valor na visão do pagador é visto como despesa, ou seja, negativo, em contrapartida todo valor na visão recebedor é visto como uma entrada, ou seja, positivo."
+,DS_TRAN,"Descrição da transação, sendo PIX, TED, BOLETO ou SISTEMICO",String,Descrição do tipo de transação.
+,DT_REFE,Data de referência da base,Date,"Data de referência da transação. Contém somente transações de 3 meses, de março a maio de 2025. As datas podem variar 5 dias para frente ou para trás, mas garantindo que estão sempre no mês de referência em que aconteceu a transação."
