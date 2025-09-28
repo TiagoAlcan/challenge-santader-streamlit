@@ -11,6 +11,7 @@ import math # Importado para a função de arredondamento da paginação
 st.set_page_config(
     layout="wide",
     page_title="Dashboard de Risco e Oportunidades",
+    page_subtitle="Olá Eduardo, esse é sua carteira de clientes de clientes PJ",
     page_icon="🏦"
 )
 
@@ -115,7 +116,7 @@ df_processed = get_processed_data(base1, base2)
 
 # Sidebar de filtros
 st.sidebar.image("santander_logo.png", use_container_width=True)
-st.sidebar.title('Filtros do Portfólio')
+st.sidebar.title('Filtros da Carteira')
 cnae_options = ['Todos'] + sorted(df_processed['DS_CNAE'].unique().tolist())
 perfil_options = ['Todos'] + sorted(df_processed['Perfil_da_Empresa'].unique().tolist())
 risco_options = ['Todos'] + ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Muito Alto']
@@ -135,24 +136,24 @@ if selected_oportunidade != 'Todos': filtered_df = filtered_df[filtered_df['Opor
 
 # Seção de Título e KPIs
 st.title('Dashboard de Risco e Oportunidades')
-st.markdown("Análise do portfólio de clientes PJ para identificação de perfis de risco e oportunidades de negócio.")
+st.markdown("Análise da carteira de clientes PJ para identificação de perfis de risco e oportunidades de negócio.")
 
-st.subheader("Visão Geral do Portfólio")
+st.subheader("Visão Geral da Carteira de Clientes")
 st.caption("Os cartões abaixo resumem os dados das empresas selecionadas nos filtros laterais.")
 kpi1, kpi2 = st.columns(2)
 with kpi1:
     with st.container(border=True):
-        st.metric("🏢 Empresas na Seleção", f"{len(filtered_df):,}")
+        st.metric("🏢 Clientes Total", f"{len(filtered_df):,}")
 with kpi2:
     with st.container(border=True):
         oportunidades_df = filtered_df[filtered_df['Oportunidade_Credito'] != 'Não Elegível']
-        st.metric("💰 Oportunidades de Crédito", f"{len(oportunidades_df):,}")
+        st.metric("💰 Clientes com Oportunidade de Crédito", f"{len(oportunidades_df):,}")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
 # --- SEÇÃO DA TABELA DETALHADA (COM PESQUISA E PAGINAÇÃO) ---
 
-st.subheader('Tabela Detalhada de Empresas (filtradas)')
+st.subheader('Indicador de Oportunidade de Crédito')
 
 with st.expander("Clique para ver a legenda dos Tiers de Oportunidade"):
     st.markdown("""
@@ -161,6 +162,13 @@ with st.expander("Clique para ver a legenda dos Tiers de Oportunidade"):
     - 🟡 **Ouro:** Empresas com saúde financeira 'Saudável' e risco 'Muito Baixo'. Perfil ideal para crédito de expansão e produtos de investimento.
     - ⚪ **Prata:** Empresas 'Saudável' com risco 'Baixo', ou em 'Alavancagem Estratégica' com risco baixo/muito baixo. Potencial para capital de giro e financiamentos.
     - 🟤 **Bronze:** Empresas em 'Ponto de Atenção' com risco baixo ou médio. Indicam necessidade pontual de capital, ideal para produtos de curto prazo.
+    - ⚫ **Não Elegível:** Empresas 'Endividadas' ou com risco 'Alto'/'Muito Alto'. Requerem análise cautelosa e monitoramento constante.
+                
+    **Saudável:** Empresas com saldo positivo.
+    **Alavancagem Estratégica:** Dívida < 5% do faturamento.
+    **Ponto de Atenção:** Dívida entre 5% e 10% do faturamento.
+    **Endividada:** Dívida > 10% do faturamento ou faturamento <= 0.
+                
     """)
     
 
@@ -223,7 +231,7 @@ with st.container(border=True):
 
 # --- SEÇÃO DE ANÁLISE DE CADEIA DE VALOR (MODIFICADA) ---
 st.markdown("---")
-st.subheader("🔗 Análise de Risco na Cadeia de Valor")
+st.subheader("🔗 Análise da Cadeia de Valor do Cliente")
 st.markdown("Selecione uma empresa para visualizar o risco de seus principais clientes e fornecedores em um mapa de rede.")
 
 options = sorted(df_processed['ID'].unique().tolist())
@@ -392,7 +400,7 @@ if empresa_selecionada_id:
 
 # Seção de Análises Visuais do Portfólio
 st.markdown("---")
-st.subheader("Análises Visuais do Portfólio")
+st.subheader("Análises Macro da Carteira")
 with st.container(border=True):
     tab1, tab2, tab3 = st.tabs(["📊 Saúde Financeira e Risco", "🔗 Análise B2B", "💡 Oportunidades por Setor"])
     
