@@ -4,4 +4,5 @@ datetime
 pathlib 
 plotly
 numpy
+graphviz
 scikit-learn
