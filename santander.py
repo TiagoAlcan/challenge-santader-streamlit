@@ -42,7 +42,7 @@ def classificar_risco(row):
     score = 0
     score += {'Saudável': -3, 'Alavancagem Estratégica': -1, 'Ponto de Atenção': 2, 'Endividada': 4}.get(row['Saude_Financeira'], 0)
     score += {'Madura': -1, 'Inicial': 1}.get(row['Maturidade'], 0)
-    score += {'Dependente de Clientes': 1, 'Dependente de Fornecedores': 1, 'Hub de Pagamentos': -1}.get(row['Dependencia_B2B'], 0)
+    score += {'Alta Concentração em Clientes': 1, 'Alta Concentração em Fornecedores': 1, 'Hub de Pagamentos': -1}.get(row['Dependencia_B2B'], 0)
     if score <= -2: return 'Muito Baixo'
     if score <= 0: return 'Baixo'
     if score <= 2: return 'Médio'
@@ -90,8 +90,8 @@ def get_processed_data(_df1, _df2):
         pgto, rcbe = row['Transacoes_Pagas'], row['Transacoes_Recebidas']
         if rcbe == 0 and pgto > 0: return 'Hub de Pagamentos'
         if pgto == 0 and rcbe > 0: return 'Concentradora de Recebimentos'
-        if rcbe > 3 * pgto: return 'Dependente de Clientes'
-        if pgto > 3 * rcbe: return 'Dependente de Fornecedores'
+        if rcbe > 3 * pgto: return 'Alta Concentração em Clientes'
+        if pgto > 3 * rcbe: return 'Alta Concentração em Fornecedores'
         return 'Relacionamento Equilibrado'
     relacionamento['Dependencia_B2B'] = relacionamento.apply(analisar_dependencia, axis=1)
     
@@ -137,7 +137,6 @@ if selected_oportunidade != 'Todos': filtered_df = filtered_df[filtered_df['Opor
 # Seção de Título e KPIs
 st.title('Dashboard de Risco e Oportunidades')
 st.subheader("Olá Eduardo, essa é sua carteira de clientes PJ")
-st.markdown("Análise da carteira de clientes PJ para identificação de perfis de risco e oportunidades de negócio.")
 
 st.subheader("Visão Geral da Carteira de Clientes")
 st.caption("Os cartões abaixo resumem os dados das empresas selecionadas nos filtros laterais.")
@@ -154,24 +153,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 # --- SEÇÃO DA TABELA DETALHADA (COM PESQUISA E PAGINAÇÃO) ---
 
-st.subheader('Indicador de Oportunidade de Crédito')
-
-with st.expander("Clique para ver a legenda dos Tiers de Oportunidade"):
-    st.markdown("""
-    As cores na coluna "Oportunidade de Crédito" representam diferentes perfis de clientes, sugerindo abordagens comerciais distintas:
-
-    - 🟡 **Ouro:** Empresas com saúde financeira 'Saudável' e risco 'Muito Baixo'. Perfil ideal para crédito de expansão e produtos de investimento.
-    - ⚪ **Prata:** Empresas 'Saudável' com risco 'Baixo', ou em 'Alavancagem Estratégica' com risco baixo/muito baixo. Potencial para capital de giro e financiamentos.
-    - 🟤 **Bronze:** Empresas em 'Ponto de Atenção' com risco baixo ou médio. Indicam necessidade pontual de capital, ideal para produtos de curto prazo.
-    - ⚫ **Não Elegível:** Empresas 'Endividadas' ou com risco 'Alto'/'Muito Alto'. Requerem análise cautelosa e monitoramento constante.
-                
-    **Saudável:** Empresas com saldo positivo.
-    **Alavancagem Estratégica:** Dívida < 5% do faturamento.
-    **Ponto de Atenção:** Dívida entre 5% e 10% do faturamento.
-    **Endividada:** Dívida > 10% do faturamento ou faturamento <= 0.
-                
-    """)
-    
+st.subheader('Indicador de Oportunidade de Crédito')    
 
 def style_oportunidade(val):
     style = COLOR_OPORTUNIDADE.get(val)
@@ -231,10 +213,27 @@ with st.container(border=True):
         hide_index=True # Esconde o índice do pandas que não é mais necessário
     )
 
+with st.expander("Clique para ver a legenda"):
+    st.markdown("""
+    ### Oportunidade de Crédito
+
+    - 🟡 **Ouro:** Empresas com saúde financeira 'Saudável' e risco 'Muito Baixo'. Perfil ideal para crédito de expansão e produtos de investimento.
+    - ⚪ **Prata:** Empresas 'Saudável' com risco 'Baixo', ou em 'Alavancagem Estratégica' com risco baixo/muito baixo. Potencial para capital de giro e financiamentos.
+    - 🟤 **Bronze:** Empresas em 'Ponto de Atenção' com risco baixo ou médio. Indicam necessidade pontual de capital, ideal para produtos de curto prazo.
+    - ⚫ **Não Elegível:** Empresas 'Endividadas' ou com risco 'Alto'/'Muito Alto'. Requerem análise cautelosa e monitoramento constante.
+
+    ### Perfil da Empresa     
+    - **Saudável:** Empresas com saldo positivo.
+    - **Alavancagem Estratégica:** Dívida < 5% do faturamento.
+    - **Ponto de Atenção:** Dívida entre 5% e 10% do faturamento.
+    - **Endividada:** Dívida > 10% do faturamento ou faturamento <= 0.
+                
+    """)
+
 # --- SEÇÃO DE ANÁLISE DE CADEIA DE VALOR (MODIFICADA) ---
 st.markdown("---")
 st.subheader("🔗 Análise da Cadeia de Valor do Cliente")
-st.markdown("Selecione uma empresa para visualizar o risco de seus principais clientes e fornecedores em um mapa de rede.")
+st.markdown("Selecione uma empresa para visualizar o risco de seus principais clientes e fornecedores em um mapa de rede. Onde o topo simboliza os clientes, no meio a empresa em análise e embaixo seus fornecedores.")
 
 options = sorted(df_processed['ID'].unique().tolist())
 empresa_selecionada_id = st.selectbox(
@@ -273,12 +272,12 @@ if empresa_selecionada_id:
             
             for _, row in clientes_df.iterrows():
                 dep = row.get('Dependencia_B2B', 'Não Classificado')
-                if dep in ['Dependente de Fornecedores', 'Concentradora de Recebimentos']:
+                if dep in ['Alta Concentração em Fornecedores', 'Concentradora de Recebimentos']:
                     dependencias_criticas.append('cliente')
             
             for _, row in fornecedores_df.iterrows():
                 dep = row.get('Dependencia_B2B', 'Não Classificado')
-                if dep in ['Dependente de Clientes', 'Hub de Pagamentos']:
+                if dep in ['Alta Concentração em Clientes', 'Hub de Pagamentos']:
                     dependencias_criticas.append('fornecedor')
             
             if dependencias_criticas:
@@ -295,8 +294,8 @@ if empresa_selecionada_id:
         
         dependencia_symbol_map = {
             'Concentradora de Recebimentos': '💰',
-            'Dependente de Clientes': '📊',
-            'Dependente de Fornecedores': '🏭',
+            'Alta Concentração em Clientes': '📊',
+            'Alta Concentração em Fornecedores': '🏭',
             'Hub de Pagamentos': '💸',
             'Relacionamento Equilibrado': '⚖️',
             'Não Classificado': ''
@@ -325,7 +324,7 @@ if empresa_selecionada_id:
             if dep != 'Não Classificado':
                 label += f"\n{simbolo} {dep}"
             
-            if dep in ['Dependente de Fornecedores', 'Concentradora de Recebimentos']:
+            if dep in ['Alta Concentração em Fornecedores', 'Concentradora de Recebimentos']:
                 graph.node(str(row['ID']), label, fillcolor=cor, penwidth="3", color="red")
             else:
                 graph.node(str(row['ID']), label, fillcolor=cor)
@@ -342,7 +341,7 @@ if empresa_selecionada_id:
             if dep != 'Não Classificado':
                 label += f"\n{simbolo} {dep}"
             
-            if dep in ['Dependente de Clientes', 'Hub de Pagamentos']:
+            if dep in ['Alta Concentração em Clientes', 'Hub de Pagamentos']:
                 graph.node(str(row['ID']), label, fillcolor=cor, penwidth="3", color="red")
             else:
                 graph.node(str(row['ID']), label, fillcolor=cor)
@@ -366,8 +365,8 @@ if empresa_selecionada_id:
             with col_leg2:
                 st.markdown("**📊 Símbolos (Dependência B2B):**")
                 st.markdown("- 💰 Concentradora de Recebimentos")
-                st.markdown("- 📊 Dependente de Clientes")
-                st.markdown("- 🏭 Dependente de Fornecedores")
+                st.markdown("- 📊 Alta Concentração em Clientes")
+                st.markdown("- 🏭 Alta Concentração em Fornecedores")
                 st.markdown("- 💸 Hub de Pagamentos")
                 st.markdown("- ⚖️ Relacionamento Equilibrado")
                 st.markdown("")
@@ -402,7 +401,7 @@ with st.container(border=True):
         st.markdown("Análise da distribuição das empresas por saúde financeira e pelo nível de risco calculado.")
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown("###### Distribuição da Saúde Financeira")
+            st.markdown("###### Distribuição de Clientes por Perfil da Empresa")
             saude_counts = filtered_df['Saude_Financeira'].value_counts().reindex(['Saudável', 'Alavancagem Estratégica', 'Ponto de Atenção', 'Endividada'])
             if not saude_counts.dropna().empty:
                 color_map = {'Saudável': COLOR_SUCCESS, 'Alavancagem Estratégica': COLOR_INFO, 'Ponto de Atenção': COLOR_WARNING, 'Endividada': SANTANDER_RED}
@@ -411,10 +410,13 @@ with st.container(border=True):
                 # ALTERAÇÃO: use_container_width=True -> width='stretch'
                 st.plotly_chart(fig, use_container_width=True)
                 st.caption(
-                    "**Saudável:** Empresas com saldo positivo. "
-                    "**Alavancagem Estratégica:** Dívida < 5% do faturamento. "
-                    "**Ponto de Atenção:** Dívida entre 5% e 10% do faturamento. "
-                    "**Endividada:** Dívida > 10% do faturamento ou faturamento <= 0."
+                    """
+                    **Saudável:** Empresas com saldo positivo.<br>
+                    **Alavancagem Estratégica:** Dívida < 5% do faturamento.<br>
+                    **Ponto de Atenção:** Dívida entre 5% e 10% do faturamento.<br>
+                    **Endividada:** Dívida > 10% do faturamento ou faturamento <= 0.
+                    """,
+                    unsafe_allow_html=True
                 )
             else:
                 st.info("Não há dados para exibir com os filtros atuais.")
@@ -428,8 +430,7 @@ with st.container(border=True):
                 # ALTERAÇÃO: use_container_width=True -> width='stretch'
                 st.plotly_chart(fig, use_container_width=True)
                 st.caption(
-                    "O nível de risco é calculado com base na saúde financeira, maturidade e dependência B2B da empresa. "
-                    "**Muito Baixo** e **Baixo** indicam menor risco, enquanto **Alto** e **Muito Alto** indicam maior risco."
+                    "O nível de risco é calculado com base na saúde financeira, maturidade e dependência B2B da empresa"
                 )
             else:
                 st.info("Não há dados para exibir com os filtros atuais.")
@@ -447,7 +448,7 @@ with st.container(border=True):
             st.markdown('###### Risco vs. Dependência B2B')
             if not filtered_df.empty:
                 pivot = filtered_df.pivot_table(index='Dependencia_B2B', columns='Risco_Santander', values='ID', aggfunc='count', fill_value=0)
-                ordem_categorias = ['Concentradora de Recebimentos', 'Dependente de Clientes', 'Relacionamento Equilibrado', 'Dependente de Fornecedores', 'Hub de Pagamentos', 'Não Classificado']
+                ordem_categorias = ['Concentradora de Recebimentos', 'Alta Concentração em Clientes', 'Relacionamento Equilibrado', 'Alta Concentração em Fornecedores', 'Hub de Pagamentos', 'Não Classificado']
                 pivot = pivot.reindex([cat for cat in ordem_categorias if cat in pivot.index])
 
                 if not pivot.empty and len(pivot.columns) > 0:
@@ -475,12 +476,13 @@ with st.container(border=True):
                     # ALTERAÇÃO: use_container_width=True -> width='stretch'
                     st.plotly_chart(fig, use_container_width=True)
                     st.caption(
-                        "**Dependência B2B** categoriza as empresas pelo fluxo de transações: "
-                        "**Hub de Pagamentos** (paga muito, recebe pouco), "
-                        "**Concentradora de Recebimentos** (recebe muito, paga pouco), "
-                        "**Dependente de Clientes/Fornecedores** (forte desequilíbrio para um lado), "
-                        "e **Relacionamento Equilibrado**."
+                        "**Dependência B2B** categoriza as empresas pelo fluxo de transações:\n"
+                        "- **Hub de Pagamentos** (paga muito, recebe pouco)\n"
+                        "- **Concentradora de Recebimentos** (recebe muito, paga pouco)\n"
+                        "- **Alta Concentração em Clientes/Fornecedores** (forte desequilíbrio para um lado)\n"
+                        "- **Relacionamento Equilibrado**"
                     )
+
                 else:
                     st.info("Não há dados para exibir com os filtros atuais.")
             else:
