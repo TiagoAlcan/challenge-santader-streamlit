@@ -11,7 +11,6 @@ import math # Importado para a função de arredondamento da paginação
 st.set_page_config(
     layout="wide",
     page_title="Dashboard de Risco e Oportunidades",
-    # O argumento 'page_subtitle' foi removido daqui, pois não é válido.
     page_icon="🏦"
 )
 
@@ -78,7 +77,7 @@ def get_processed_data(_df1, _df2):
     relacionamento = pd.merge(rel_recebido, rel_pago, left_on='ID_RCBE', right_on='ID_PGTO', how='outer')
     relacionamento = relacionamento.rename(columns={'ID_RCBE': 'ID'}).drop(columns='ID_PGTO').fillna(0)
     relacionamento['Total_Transacoes'] = relacionamento['Transacoes_Recebidas'] + relacionamento['Transacoes_Pagas']
-
+    
     def classificar_b2b_intensidade(total):
         if total > 50: return 'Muito Alta'
         if total > 30: return 'Alta'
@@ -86,7 +85,7 @@ def get_processed_data(_df1, _df2):
         if total > 5: return 'Baixa'
         return 'Muito Baixa'
     relacionamento['Intensidade_B2B'] = relacionamento['Total_Transacoes'].apply(classificar_b2b_intensidade)
-
+    
     def analisar_dependencia(row):
         pgto, rcbe = row['Transacoes_Pagas'], row['Transacoes_Recebidas']
         if rcbe == 0 and pgto > 0: return 'Hub de Pagamentos'
@@ -95,12 +94,12 @@ def get_processed_data(_df1, _df2):
         if pgto > 3 * rcbe: return 'Dependente de Fornecedores'
         return 'Relacionamento Equilibrado'
     relacionamento['Dependencia_B2B'] = relacionamento.apply(analisar_dependencia, axis=1)
-
+    
     df1_sorted = df1.sort_values(by=['ID', 'DT_REFE'], ascending=[True, False])
     df_agg = df1_sorted.groupby('ID').first().reset_index()
     df_final = pd.merge(df_agg, relacionamento, on='ID', how='left')
     df_final.fillna({'Total_Transacoes': 0, 'Intensidade_B2B': 'Não Classificado', 'Dependencia_B2B': 'Não Classificado'}, inplace=True)
-
+    
     hoje = datetime.datetime.now()
     df_final['Tempo_Atividade_Anos'] = round((hoje - df_final['DT_ABRT']).dt.days / 365.25, 1)
     df_final['Maturidade'] = df_final['Tempo_Atividade_Anos'].apply(lambda x: 'Madura' if x > 5 else 'Inicial')
@@ -109,13 +108,14 @@ def get_processed_data(_df1, _df2):
     df_final['Risco_Santander'] = df_final.apply(classificar_risco, axis=1)
     df_final['Oportunidade_Credito'] = df_final.apply(classificar_oportunidade, axis=1)
     return df_final
-
+    
 # --- 3. LAYOUT DO DASHBOARD ---
 base1, base2 = load_raw_data()
 df_processed = get_processed_data(base1, base2)
 
 # Sidebar de filtros
-st.sidebar.image("santander_logo.png", use_container_width=True)
+# ALTERAÇÃO: use_container_width=True -> width='stretch'
+st.sidebar.image("santander_logo.png", width='stretch')
 st.sidebar.title('Filtros da Carteira')
 cnae_options = ['Todos'] + sorted(df_processed['DS_CNAE'].unique().tolist())
 perfil_options = ['Todos'] + sorted(df_processed['Perfil_da_Empresa'].unique().tolist())
@@ -136,8 +136,6 @@ if selected_oportunidade != 'Todos': filtered_df = filtered_df[filtered_df['Opor
 
 # Seção de Título e KPIs
 st.title('Dashboard de Risco e Oportunidades')
-# --- ALTERAÇÃO APLICADA AQUI ---
-# O texto foi movido para um st.subheader para aparecer no corpo da página.
 st.subheader("Olá Eduardo, essa é sua carteira de clientes PJ")
 st.markdown("Análise da carteira de clientes PJ para identificação de perfis de risco e oportunidades de negócio.")
 
@@ -173,7 +171,7 @@ with st.expander("Clique para ver a legenda dos Tiers de Oportunidade"):
     **Endividada:** Dívida > 10% do faturamento ou faturamento <= 0.
                 
     """)
-
+    
 
 def style_oportunidade(val):
     style = COLOR_OPORTUNIDADE.get(val)
@@ -199,12 +197,12 @@ with st.container(border=True):
     col1, col2, col_info = st.columns([1, 2, 3])
     with col1:
         items_per_page = st.selectbox("Itens por página", [10, 25, 50, 100], index=0)
-
+    
     total_pages = math.ceil(total_rows / items_per_page) if total_rows > 0 else 1
-
+    
     with col2:
         page_number = st.number_input("Página", min_value=1, max_value=total_pages, value=1, step=1)
-
+    
     # Lógica para fatiar o DataFrame
     start_idx = (page_number - 1) * items_per_page
     end_idx = start_idx + items_per_page
@@ -216,7 +214,7 @@ with st.container(border=True):
 
     # --- EXIBIÇÃO DA TABELA PAGINADA E ESTILIZADA ---
     cols_display = ['ID', 'DS_CNAE', 'Perfil_da_Empresa', 'VL_FATU', 'VL_SLDO', 'Risco_Santander', 'Oportunidade_Credito']
-
+    
     # Garante que o dataframe paginado tenha as colunas corretas caso esteja vazio
     if paginated_df.empty:
         df_display = pd.DataFrame(columns=cols_display)
@@ -225,10 +223,11 @@ with st.container(border=True):
 
     styler = df_display.style.map(style_oportunidade, subset=['Oportunidade_Credito'])
     styler = styler.format({"VL_FATU": "R$ {:,.0f}", "VL_SLDO": "R$ {:,.0f}"})
-
+    
+    # ALTERAÇÃO: use_container_width=True -> width='stretch'
     st.dataframe(
         styler,
-        use_container_width=True,
+        width='stretch',
         hide_index=True # Esconde o índice do pandas que não é mais necessário
     )
 
@@ -252,7 +251,7 @@ if empresa_selecionada_id:
     fornecedores = base2[base2['ID_PGTO'] == empresa_selecionada_id]
     top_fornecedores_id = fornecedores.groupby('ID_RCBE')['VL'].sum().nlargest(5).index
     fornecedores_df = df_processed[df_processed['ID'].isin(top_fornecedores_id)]
-
+    
     empresa_central_info = df_processed[df_processed['ID'] == empresa_selecionada_id].iloc[0]
 
     col_kpi, col_graph = st.columns([1, 2])
@@ -262,29 +261,26 @@ if empresa_selecionada_id:
             alto_risco_clientes = clientes_df[clientes_df['Risco_Santander'].isin(['Alto', 'Muito Alto'])].shape[0]
             st.metric("Clientes de Alto Risco", f"{alto_risco_clientes} de {len(clientes_df)}",
                       help="Número de clientes, entre os 5 principais, com risco 'Alto' ou 'Muito Alto'.")
-
+        
         with st.container(border=True):
             alto_risco_fornecedores = fornecedores_df[fornecedores_df['Risco_Santander'].isin(['Alto', 'Muito Alto'])].shape[0]
             st.metric("Fornecedores de Alto Risco", f"{alto_risco_fornecedores} de {len(fornecedores_df)}",
                       help="Número de fornecedores, entre os 5 principais, com risco 'Alto' ou 'Muito Alto'.")
-
-        # Adicionar análise de dependência
+        
         st.markdown("###### Análise de Dependência")
         with st.container(border=True):
             dependencias_criticas = []
-
-            # Verificar dependência dos clientes
+            
             for _, row in clientes_df.iterrows():
                 dep = row.get('Dependencia_B2B', 'Não Classificado')
                 if dep in ['Dependente de Fornecedores', 'Concentradora de Recebimentos']:
                     dependencias_criticas.append('cliente')
-
-            # Verificar dependência dos fornecedores
+            
             for _, row in fornecedores_df.iterrows():
                 dep = row.get('Dependencia_B2B', 'Não Classificado')
                 if dep in ['Dependente de Clientes', 'Hub de Pagamentos']:
                     dependencias_criticas.append('fornecedor')
-
+            
             if dependencias_criticas:
                 st.warning(f"⚠️ {len(dependencias_criticas)} empresa(s) com dependência crítica detectada")
             else:
@@ -296,8 +292,7 @@ if empresa_selecionada_id:
             'Muito Baixo': '#2E8B57', 'Baixo': '#90EE90',
             'Médio': '#FFD700', 'Alto': '#FFA07A', 'Muito Alto': '#DC143C'
         }
-
-        # Mapa de símbolos para dependência
+        
         dependencia_symbol_map = {
             'Concentradora de Recebimentos': '💰',
             'Dependente de Clientes': '📊',
@@ -306,65 +301,59 @@ if empresa_selecionada_id:
             'Relacionamento Equilibrado': '⚖️',
             'Não Classificado': ''
         }
-
+        
         graph = graphviz.Digraph()
         graph.attr('node', shape='box', style='rounded,filled')
 
-        # Nó central com informações de dependência
         risco_central = empresa_central_info['Risco_Santander']
         dep_central = empresa_central_info.get('Dependencia_B2B', 'Não Classificado')
         simbolo_central = dependencia_symbol_map.get(dep_central, '')
-
+        
         label_central = f"{empresa_selecionada_id}\n(Risco: {risco_central})"
         if dep_central != 'Não Classificado':
             label_central += f"\n{simbolo_central} {dep_central}"
-
+        
         graph.node(str(empresa_selecionada_id), label_central, fillcolor="#ADD8E6")
 
-        # Adicionar clientes com informações de dependência
         for _, row in clientes_df.iterrows():
             risco = row['Risco_Santander']
             dep = row.get('Dependencia_B2B', 'Não Classificado')
             cor = risco_color_map.get(risco, '#D3D3D3')
             simbolo = dependencia_symbol_map.get(dep, '')
-
+            
             label = f"Cliente: {row['ID']}\n(Risco: {risco})"
             if dep != 'Não Classificado':
                 label += f"\n{simbolo} {dep}"
-
-            # Adicionar borda vermelha se houver dependência crítica
+            
             if dep in ['Dependente de Fornecedores', 'Concentradora de Recebimentos']:
                 graph.node(str(row['ID']), label, fillcolor=cor, penwidth="3", color="red")
             else:
                 graph.node(str(row['ID']), label, fillcolor=cor)
-
+            
             graph.edge(str(row['ID']), str(empresa_selecionada_id))
 
-        # Adicionar fornecedores com informações de dependência
         for _, row in fornecedores_df.iterrows():
             risco = row['Risco_Santander']
             dep = row.get('Dependencia_B2B', 'Não Classificado')
             cor = risco_color_map.get(risco, '#D3D3D3')
             simbolo = dependencia_symbol_map.get(dep, '')
-
+            
             label = f"Forn.: {row['ID']}\n(Risco: {risco})"
             if dep != 'Não Classificado':
                 label += f"\n{simbolo} {dep}"
-
-            # Adicionar borda vermelha se houver dependência crítica
+            
             if dep in ['Dependente de Clientes', 'Hub de Pagamentos']:
                 graph.node(str(row['ID']), label, fillcolor=cor, penwidth="3", color="red")
             else:
                 graph.node(str(row['ID']), label, fillcolor=cor)
-
+            
             graph.edge(str(empresa_selecionada_id), str(row['ID']))
-
+            
         st.graphviz_chart(graph)
-
-        # Legenda melhorada
+        
         with st.expander("📖 Legenda do Mapa de Rede"):
             col_leg1, col_leg2 = st.columns(2)
-
+            
             with col_leg1:
                 st.markdown("**🎨 Cores (Nível de Risco):**")
                 st.markdown("- 🟢 Verde Escuro: Risco Muito Baixo")
@@ -373,7 +362,7 @@ if empresa_selecionada_id:
                 st.markdown("- 🟠 Laranja: Risco Alto")
                 st.markdown("- 🔴 Vermelho: Risco Muito Alto")
                 st.markdown("- 🔵 Azul: Empresa Central")
-
+                
             with col_leg2:
                 st.markdown("**📊 Símbolos (Dependência B2B):**")
                 st.markdown("- 💰 Concentradora de Recebimentos")
@@ -383,7 +372,7 @@ if empresa_selecionada_id:
                 st.markdown("- ⚖️ Relacionamento Equilibrado")
                 st.markdown("")
                 st.markdown("**⚠️ Borda vermelha:** Indica dependência crítica")
-
+            
             st.info("As setas indicam o fluxo de pagamento: saindo da empresa pagadora para a recebedora.")
 
     with st.expander("Ver tabelas de detalhes dos principais clientes e fornecedores"):
@@ -393,20 +382,22 @@ if empresa_selecionada_id:
             cols_detail = ['ID', 'DS_CNAE', 'Saude_Financeira', 'Risco_Santander']
             if 'Dependencia_B2B' in clientes_df.columns:
                 cols_detail.append('Dependencia_B2B')
-            st.dataframe(clientes_df[cols_detail], use_container_width=True)
+            # ALTERAÇÃO: use_container_width=True -> width='stretch'
+            st.dataframe(clientes_df[cols_detail], width='stretch')
         with col_fornecedores:
             st.write("**Principais Fornecedores (Top 5)**")
             cols_detail = ['ID', 'DS_CNAE', 'Saude_Financeira', 'Risco_Santander']
             if 'Dependencia_B2B' in fornecedores_df.columns:
                 cols_detail.append('Dependencia_B2B')
-            st.dataframe(fornecedores_df[cols_detail], use_container_width=True)
+            # ALTERAÇÃO: use_container_width=True -> width='stretch'
+            st.dataframe(fornecedores_df[cols_detail], width='stretch')
 
 # Seção de Análises Visuais do Portfólio
 st.markdown("---")
 st.subheader("Análises Macro da Carteira")
 with st.container(border=True):
     tab1, tab2, tab3 = st.tabs(["📊 Saúde Financeira e Risco", "🔗 Análise B2B", "💡 Oportunidades por Setor"])
-
+    
     with tab1:
         st.markdown("Análise da distribuição das empresas por saúde financeira e pelo nível de risco calculado.")
         col1, col2 = st.columns(2)
@@ -417,6 +408,7 @@ with st.container(border=True):
                 color_map = {'Saudável': COLOR_SUCCESS, 'Alavancagem Estratégica': COLOR_INFO, 'Ponto de Atenção': COLOR_WARNING, 'Endividada': SANTANDER_RED}
                 fig = go.Figure(go.Bar(x=saude_counts.index, y=saude_counts.values, marker_color=[color_map.get(i) for i in saude_counts.index]))
                 fig.update_layout(template="plotly_white", xaxis_title="", yaxis_title="Nº de Empresas", showlegend=False, margin=dict(t=10, l=10, r=10, b=10), font_color=PRIMARY_TEXT_COLOR)
+                # ALTERAÇÃO: use_container_width=True -> width='stretch'
                 st.plotly_chart(fig, use_container_width=True)
                 st.caption(
                     "**Saudável:** Empresas com saldo positivo. "
@@ -433,6 +425,7 @@ with st.container(border=True):
                 color_scale = [COLOR_SUCCESS, '#5DBB63', COLOR_WARNING, '#FF8C00', SANTANDER_RED]
                 fig = go.Figure(go.Bar(x=risco_counts.index, y=risco_counts.values, marker_color=color_scale))
                 fig.update_layout(template="plotly_white", xaxis_title="", yaxis_title="Nº de Empresas", showlegend=False, margin=dict(t=10, l=10, r=10, b=10), font_color=PRIMARY_TEXT_COLOR)
+                # ALTERAÇÃO: use_container_width=True -> width='stretch'
                 st.plotly_chart(fig, use_container_width=True)
                 st.caption(
                     "O nível de risco é calculado com base na saúde financeira, maturidade e dependência B2B da empresa. "
@@ -440,8 +433,7 @@ with st.container(border=True):
                 )
             else:
                 st.info("Não há dados para exibir com os filtros atuais.")
-        st.markdown("---") # Separador para o gráfico de dispersão
-        # GRÁFICO DE DISPERSÃO ADICIONADO
+        st.markdown("---") 
         st.markdown("###### Relação Faturamento vs. Saldo")
         if not filtered_df.empty:
             st.scatter_chart(filtered_df, x='VL_FATU', y='VL_SLDO', color='Risco_Santander')
@@ -455,7 +447,6 @@ with st.container(border=True):
             st.markdown('###### Risco vs. Dependência B2B')
             if not filtered_df.empty:
                 pivot = filtered_df.pivot_table(index='Dependencia_B2B', columns='Risco_Santander', values='ID', aggfunc='count', fill_value=0)
-                # Garante que a ordem das categorias no gráfico seja mais lógica
                 ordem_categorias = ['Concentradora de Recebimentos', 'Dependente de Clientes', 'Relacionamento Equilibrado', 'Dependente de Fornecedores', 'Hub de Pagamentos', 'Não Classificado']
                 pivot = pivot.reindex([cat for cat in ordem_categorias if cat in pivot.index])
 
@@ -465,7 +456,6 @@ with st.container(border=True):
                         'Médio': COLOR_WARNING, 'Alto': '#FF8C00', 'Muito Alto': SANTANDER_RED
                     }
                     fig = go.Figure()
-                    # Garante que a ordem das cores na legenda siga a ordem de risco
                     ordem_risco = ['Muito Alto', 'Alto', 'Médio', 'Baixo', 'Muito Baixo']
                     for risco_cat in [r for r in ordem_risco if r in pivot.columns]:
                         fig.add_trace(go.Bar(
@@ -476,12 +466,13 @@ with st.container(border=True):
                         barmode='stack', template="plotly_white", xaxis_title="", yaxis_title="Nº de Empresas",
                         showlegend=True, margin=dict(t=20, l=10, r=10, b=10), font_color=PRIMARY_TEXT_COLOR,
                         legend=dict(
-                            title_text='Nível de Risco', # Título adicionado à legenda
-                            orientation="h",
-                            yanchor="bottom", y=1.02,
+                            title_text='Nível de Risco', 
+                            orientation="h", 
+                            yanchor="bottom", y=1.02, 
                             xanchor="right", x=1
                         )
                     )
+                    # ALTERAÇÃO: use_container_width=True -> width='stretch'
                     st.plotly_chart(fig, use_container_width=True)
                     st.caption(
                         "**Dependência B2B** categoriza as empresas pelo fluxo de transações: "
@@ -499,10 +490,10 @@ with st.container(border=True):
             if not filtered_df.empty:
                 intensidade_counts = filtered_df['Intensidade_B2B'].value_counts().reindex(['Muito Baixa', 'Baixa', 'Média', 'Alta', 'Muito Alta'])
                 intensidade_color_map = {
-                    'Muito Baixa': '#D3D3D3',
-                    'Baixa': '#A9A9A9',
-                    'Média': COLOR_INFO,
-                    'Alta': COLOR_WARNING,
+                    'Muito Baixa': '#D3D3D3', 
+                    'Baixa': '#A9A9A9',      
+                    'Média': COLOR_INFO,     
+                    'Alta': COLOR_WARNING,   
                     'Muito Alta': SANTANDER_RED
                 }
                 if not intensidade_counts.dropna().empty:
@@ -514,6 +505,7 @@ with st.container(border=True):
                         template="plotly_white", xaxis_title="", yaxis_title="Nº de Empresas",
                         margin=dict(t=10, l=10, r=10, b=10), font_color=PRIMARY_TEXT_COLOR
                     )
+                    # ALTERAÇÃO: use_container_width=True -> width='stretch'
                     st.plotly_chart(fig, use_container_width=True)
                     st.caption(
                         "Este gráfico mostra a distribuição das empresas pela intensidade de suas transações B2B, "
@@ -534,6 +526,7 @@ with st.container(border=True):
                 color_discrete_map={k: v['bg'] for k, v in COLOR_OPORTUNIDADE.items()}
             )
             fig_treemap.update_layout(margin=dict(t=30, l=10, r=10, b=10), template="plotly_white", font_color=PRIMARY_TEXT_COLOR)
+            # ALTERAÇÃO: use_container_width=True -> width='stretch'
             st.plotly_chart(fig_treemap, use_container_width=True)
             st.caption(
                 "Oportunidades de crédito são classificadas em tiers: "
