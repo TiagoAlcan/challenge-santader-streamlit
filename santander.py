@@ -125,7 +125,7 @@ st.markdown("""
     /* Sidebar com mesma cor da página e linha divisória sutil */
     [data-testid="stSidebar"] {
         background-color: #0e1117;
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     /* Esconder o label do radio */
@@ -183,11 +183,6 @@ st.markdown("""
     /* Texto da sidebar */
     [data-testid="stSidebar"] * {
         color: white !important;
-    }
-
-    /* Logo */
-    [data-testid="stSidebar"] img {
-        filter: brightness(0) invert(1);
     }
 
     /* Aumentar tamanho dos selectbox */
@@ -354,167 +349,6 @@ if pagina == "Visão Geral da Carteira":
         - **Endividada:** Dívida > 10% do faturamento ou faturamento <= 0.
                     
         """)
-    
-    # --- SEÇÃO DE ANÁLISE DE CADEIA DE VALOR (MODIFICADA) ---
-    st.markdown("---")
-    st.subheader("🔗 Análise da Cadeia de Valor do Cliente")
-    st.markdown("Selecione uma empresa para visualizar o risco de seus principais clientes e fornecedores em um mapa de rede. Onde o topo simboliza os clientes, no meio a empresa em análise e embaixo seus fornecedores.")
-    
-    options = sorted(df_processed['ID'].unique().tolist())
-    empresa_selecionada_id = st.selectbox(
-        'Selecione a Empresa para Análise:',
-        options=options,
-        help="Digite o ID da empresa para buscar."
-    )
-    
-    if empresa_selecionada_id:
-        clientes = base2[base2['ID_RCBE'] == empresa_selecionada_id]
-        top_clientes_id = clientes.groupby('ID_PGTO')['VL'].sum().nlargest(5).index
-        clientes_df = df_processed[df_processed['ID'].isin(top_clientes_id)]
-    
-        fornecedores = base2[base2['ID_PGTO'] == empresa_selecionada_id]
-        top_fornecedores_id = fornecedores.groupby('ID_RCBE')['VL'].sum().nlargest(5).index
-        fornecedores_df = df_processed[df_processed['ID'].isin(top_fornecedores_id)]
-        
-        empresa_central_info = df_processed[df_processed['ID'] == empresa_selecionada_id].iloc[0]
-    
-        col_kpi, col_graph = st.columns([1, 2])
-        with col_kpi:
-            st.markdown("###### Resumo do Risco da Cadeia")
-            with st.container(border=True):
-                alto_risco_clientes = clientes_df[clientes_df['Risco_Santander'].isin(['Alto', 'Muito Alto'])].shape[0]
-                st.metric("Clientes de Alto Risco", f"{alto_risco_clientes} de {len(clientes_df)}",
-                          help="Número de clientes, entre os 5 principais, com risco 'Alto' ou 'Muito Alto'.")
-            
-            with st.container(border=True):
-                alto_risco_fornecedores = fornecedores_df[fornecedores_df['Risco_Santander'].isin(['Alto', 'Muito Alto'])].shape[0]
-                st.metric("Fornecedores de Alto Risco", f"{alto_risco_fornecedores} de {len(fornecedores_df)}",
-                          help="Número de fornecedores, entre os 5 principais, com risco 'Alto' ou 'Muito Alto'.")
-            
-            st.markdown("###### Análise de Dependência")
-            with st.container(border=True):
-                dependencias_criticas = []
-                
-                for _, row in clientes_df.iterrows():
-                    dep = row.get('Dependencia_B2B', 'Não Classificado')
-                    if dep in ['Alta Concentração em Fornecedores', 'Concentradora de Recebimentos']:
-                        dependencias_criticas.append('cliente')
-                
-                for _, row in fornecedores_df.iterrows():
-                    dep = row.get('Dependencia_B2B', 'Não Classificado')
-                    if dep in ['Alta Concentração em Clientes', 'Hub de Pagamentos']:
-                        dependencias_criticas.append('fornecedor')
-                
-                if dependencias_criticas:
-                    st.warning(f"⚠️ {len(dependencias_criticas)} empresa(s) com dependência crítica detectada")
-                else:
-                    st.success("✅ Nenhuma dependência crítica detectada")
-    
-        with col_graph:
-            st.markdown("###### Mapa da Cadeia de Valor")
-            risco_color_map = {
-                'Muito Baixo': '#2E8B57', 'Baixo': '#90EE90',
-                'Médio': '#FFD700', 'Alto': '#FFA07A', 'Muito Alto': '#DC143C'
-            }
-            
-            dependencia_symbol_map = {
-                'Concentradora de Recebimentos': '💰',
-                'Alta Concentração em Clientes': '📊',
-                'Alta Concentração em Fornecedores': '🏭',
-                'Hub de Pagamentos': '💸',
-                'Relacionamento Equilibrado': '⚖️',
-                'Não Classificado': ''
-            }
-            
-            graph = graphviz.Digraph()
-            graph.attr('node', shape='box', style='rounded,filled')
-    
-            risco_central = empresa_central_info['Risco_Santander']
-            dep_central = empresa_central_info.get('Dependencia_B2B', 'Não Classificado')
-            simbolo_central = dependencia_symbol_map.get(dep_central, '')
-            
-            label_central = f"{empresa_selecionada_id}\n(Risco: {risco_central})"
-            if dep_central != 'Não Classificado':
-                label_central += f"\n{simbolo_central} {dep_central}"
-            
-            graph.node(str(empresa_selecionada_id), label_central, fillcolor="#ADD8E6")
-    
-            for _, row in clientes_df.iterrows():
-                risco = row['Risco_Santander']
-                dep = row.get('Dependencia_B2B', 'Não Classificado')
-                cor = risco_color_map.get(risco, '#D3D3D3')
-                simbolo = dependencia_symbol_map.get(dep, '')
-                
-                label = f"Cliente: {row['ID']}\n(Risco: {risco})"
-                if dep != 'Não Classificado':
-                    label += f"\n{simbolo} {dep}"
-                
-                if dep in ['Alta Concentração em Fornecedores', 'Concentradora de Recebimentos']:
-                    graph.node(str(row['ID']), label, fillcolor=cor, penwidth="3", color="red")
-                else:
-                    graph.node(str(row['ID']), label, fillcolor=cor)
-                
-                graph.edge(str(row['ID']), str(empresa_selecionada_id))
-    
-            for _, row in fornecedores_df.iterrows():
-                risco = row['Risco_Santander']
-                dep = row.get('Dependencia_B2B', 'Não Classificado')
-                cor = risco_color_map.get(risco, '#D3D3D3')
-                simbolo = dependencia_symbol_map.get(dep, '')
-                
-                label = f"Forn.: {row['ID']}\n(Risco: {risco})"
-                if dep != 'Não Classificado':
-                    label += f"\n{simbolo} {dep}"
-                
-                if dep in ['Alta Concentração em Clientes', 'Hub de Pagamentos']:
-                    graph.node(str(row['ID']), label, fillcolor=cor, penwidth="3", color="red")
-                else:
-                    graph.node(str(row['ID']), label, fillcolor=cor)
-                
-                graph.edge(str(empresa_selecionada_id), str(row['ID']))
-                
-            st.graphviz_chart(graph)
-            
-            with st.expander("📖 Legenda do Mapa de Rede"):
-                col_leg1, col_leg2 = st.columns(2)
-                
-                with col_leg1:
-                    st.markdown("**🎨 Cores (Nível de Risco):**")
-                    st.markdown("- 🟢 Verde Escuro: Risco Muito Baixo")
-                    st.markdown("- 🟢 Verde Claro: Risco Baixo")
-                    st.markdown("- 🟡 Amarelo: Risco Médio")
-                    st.markdown("- 🟠 Laranja: Risco Alto")
-                    st.markdown("- 🔴 Vermelho: Risco Muito Alto")
-                    st.markdown("- 🔵 Azul: Empresa Central")
-                    
-                with col_leg2:
-                    st.markdown("**📊 Símbolos (Dependência B2B):**")
-                    st.markdown("- 💰 Concentradora de Recebimentos")
-                    st.markdown("- 📊 Alta Concentração em Clientes")
-                    st.markdown("- 🏭 Alta Concentração em Fornecedores")
-                    st.markdown("- 💸 Hub de Pagamentos")
-                    st.markdown("- ⚖️ Relacionamento Equilibrado")
-                    st.markdown("")
-                    st.markdown("**⚠️ Borda vermelha:** Indica dependência crítica")
-                
-                st.info("As setas indicam o fluxo de pagamento: saindo da empresa pagadora para a recebedora.")
-    
-        with st.expander("Ver tabelas de detalhes dos principais clientes e fornecedores"):
-            col_clientes, col_fornecedores = st.columns(2)
-            with col_clientes:
-                st.write("**Principais Clientes (Top 5)**")
-                cols_detail = ['ID', 'DS_CNAE', 'Saude_Financeira', 'Risco_Santander']
-                if 'Dependencia_B2B' in clientes_df.columns:
-                    cols_detail.append('Dependencia_B2B')
-                # ALTERAÇÃO: use_container_width=True -> width='stretch'
-                st.dataframe(clientes_df[cols_detail], width='stretch')
-            with col_fornecedores:
-                st.write("**Principais Fornecedores (Top 5)**")
-                cols_detail = ['ID', 'DS_CNAE', 'Saude_Financeira', 'Risco_Santander']
-                if 'Dependencia_B2B' in fornecedores_df.columns:
-                    cols_detail.append('Dependencia_B2B')
-                # ALTERAÇÃO: use_container_width=True -> width='stretch'
-                st.dataframe(fornecedores_df[cols_detail], width='stretch')
     
     # Seção de Análises Visuais do Portfólio
     st.markdown("---")
