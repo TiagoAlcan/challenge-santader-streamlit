@@ -538,3 +538,208 @@ with st.container(border=True):
             )
         else:
             st.info("Nenhuma oportunidade de crédito encontrada com os filtros atuais.")
+
+# --- SEÇÃO DE INSIGHTS POR CNPJ ---
+st.markdown("---")
+st.subheader("🔍 Gerador de Insights por CNPJ")
+st.markdown("Analise 1 ou mais CNPJs e obtenha insights automáticos sobre sua situação financeira, risco e oportunidades.")
+
+with st.container(border=True):
+    # Lista de todos CNPJs disponíveis ordenados
+    todos_cnpjs = sorted(df_processed['ID'].unique().tolist())
+
+    cnpjs_selecionados = st.multiselect(
+        "Selecione os CNPJs para análise (pode selecionar múltiplos):",
+        options=todos_cnpjs,
+        help="Comece digitando para filtrar ou clique para ver a lista completa"
+    )
+
+    cnpjs_list = cnpjs_selecionados
+
+    gerar_insights = st.button("🚀 Gerar Insights", type="primary")
+
+    if gerar_insights and cnpjs_list:
+
+        if cnpjs_list:
+            # Filtrar empresas
+            empresas_analisadas = df_processed[df_processed['ID'].isin(cnpjs_list)]
+
+            if empresas_analisadas.empty:
+                st.warning("⚠️ Nenhum CNPJ válido encontrado na base de dados.")
+            else:
+                st.success(f"✅ {len(empresas_analisadas)} empresa(s) encontrada(s)")
+
+                # --- INSIGHTS INDIVIDUAIS ---
+                for idx, (_, empresa) in enumerate(empresas_analisadas.iterrows()):
+                    with st.expander(f"📊 **{empresa['ID']}** - {empresa['DS_CNAE']}", expanded=(idx==0)):
+                        col1, col2, col3 = st.columns(3)
+
+                        with col1:
+                            st.metric("Faturamento", f"R$ {empresa['VL_FATU']:,.0f}")
+                            st.metric("Saldo", f"R$ {empresa['VL_SLDO']:,.0f}")
+
+                        with col2:
+                            oport_color = COLOR_OPORTUNIDADE.get(empresa['Oportunidade_Credito'], {'bg': '#E0E0E0', 'text': '#000000'})
+                            st.markdown(f"**Oportunidade:** <span style='background-color: {oport_color['bg']}; color: {oport_color['text']}; padding: 3px 10px; border-radius: 5px;'>{empresa['Oportunidade_Credito']}</span>", unsafe_allow_html=True)
+                            st.metric("Risco", empresa['Risco_Santander'])
+
+                        with col3:
+                            st.metric("Anos de Atividade", f"{empresa['Tempo_Atividade_Anos']}")
+                            st.metric("Maturidade", empresa['Maturidade'])
+
+                        # INSIGHTS TEXTUAIS
+                        st.markdown("---")
+                        st.markdown("#### Insights Automáticos")
+
+                        insights = []
+
+                        # Insight 1: Saúde Financeira
+                        if empresa['Saude_Financeira'] == 'Saudável':
+                            insights.append("**Situação Positiva**: Empresa com saldo positivo, demonstrando boa gestão de caixa.")
+                        elif empresa['Saude_Financeira'] == 'Alavancagem Estratégica':
+                            insights.append("**Alavancagem Controlada**: Dívida inferior a 5% do faturamento, indicando uso estratégico de crédito.")
+                        elif empresa['Saude_Financeira'] == 'Ponto de Atenção':
+                            insights.append("**Atenção Necessária**: Dívida entre 5-10% do faturamento. Monitoramento recomendado.")
+                        else:
+                            insights.append("**Risco Elevado**: Dívida superior a 10% do faturamento ou faturamento crítico.")
+
+                        # Insight 2: Maturidade
+                        if empresa['Maturidade'] == 'Madura':
+                            insights.append(f"**Empresa Consolidada**: Com {empresa['Tempo_Atividade_Anos']} anos de operação, demonstra estabilidade no mercado.")
+                        else:
+                            insights.append(f"**Empresa em Crescimento**: Com {empresa['Tempo_Atividade_Anos']} anos, está em fase de expansão.")
+
+                        # Insight 3: Dependência B2B
+                        if empresa['Dependencia_B2B'] == 'Hub de Pagamentos':
+                            insights.append("**Hub de Pagamentos**: Realiza muitos pagamentos mas recebe pouco. Pode ser uma distribuidora ou empresa com alta dependência de fornecedores.")
+                        elif empresa['Dependencia_B2B'] == 'Concentradora de Recebimentos':
+                            insights.append("**Concentradora de Receitas**: Recebe muito mas paga pouco. Pode ser uma varejista ou prestadora de serviços com muitos clientes finais.")
+                        elif empresa['Dependencia_B2B'] == 'Alta Concentração em Clientes':
+                            insights.append("**Alta Dependência de Clientes**: Forte concentração em recebimentos. Risco de dependência de poucos clientes.")
+                        elif empresa['Dependencia_B2B'] == 'Alta Concentração em Fornecedores':
+                            insights.append("**Alta Dependência de Fornecedores**: Forte concentração em pagamentos. Risco de dependência de poucos fornecedores.")
+                        elif empresa['Dependencia_B2B'] == 'Relacionamento Equilibrado':
+                            insights.append("**Cadeia Balanceada**: Equilíbrio saudável entre pagamentos e recebimentos.")
+
+                        # Insight 4: Intensidade B2B
+                        intensidade_msg = {
+                            'Muito Alta': '**Rede B2B Muito Ativa**: Empresa com alto volume de transações B2B.',
+                            'Alta': '**Rede B2B Ativa**: Boa intensidade de transações comerciais.',
+                            'Média': '**Atividade B2B Moderada**: Volume médio de transações.',
+                            'Baixa': '**Atividade B2B Limitada**: Poucas transações B2B registradas.',
+                            'Muito Baixa': '**Atividade B2B Mínima**: Volume muito baixo de transações.'
+                        }
+                        if empresa['Intensidade_B2B'] in intensidade_msg:
+                            insights.append(intensidade_msg[empresa['Intensidade_B2B']])
+
+                        # Insight 5: Oportunidade de Crédito
+                        if empresa['Oportunidade_Credito'] == 'Ouro':
+                            insights.append("**Excelente Oportunidade**: Cliente ideal para produtos de crédito premium, expansão e investimentos.")
+                        elif empresa['Oportunidade_Credito'] == 'Prata':
+                            insights.append("**Boa Oportunidade**: Cliente adequado para capital de giro e financiamentos estruturados.")
+                        elif empresa['Oportunidade_Credito'] == 'Bronze':
+                            insights.append("**Oportunidade Pontual**: Cliente com necessidade de capital de curto prazo ou produtos específicos.")
+                        else:
+                            insights.append("**Não Elegível**: Cliente requer análise mais profunda ou reestruturação antes de novos créditos.")
+
+                        # Insight 6: Análise de Fluxo de Caixa
+                        if empresa['VL_SLDO'] < 0 and empresa['VL_FATU'] > 0:
+                            proporcao = abs(empresa['VL_SLDO']) / empresa['VL_FATU'] * 100
+                            insights.append(f"**Análise de Caixa**: Saldo negativo representa {proporcao:.1f}% do faturamento anual.")
+                        elif empresa['VL_SLDO'] > 0:
+                            proporcao = empresa['VL_SLDO'] / empresa['VL_FATU'] * 100 if empresa['VL_FATU'] > 0 else 0
+                            insights.append(f"**Reserva Saudável**: Saldo positivo equivale a {proporcao:.1f}% do faturamento anual.")
+
+                        # Exibir insights
+                        for insight in insights:
+                            st.markdown(f"• {insight}")
+
+                        # RECOMENDAÇÕES
+                        st.markdown("---")
+                        st.markdown("#### Recomendações de Produtos")
+
+                        recomendacoes = []
+
+                        if empresa['Oportunidade_Credito'] in ['Ouro', 'Prata']:
+                            recomendacoes.append("**Linha de Crédito para Expansão** - Ideal para investimentos em infraestrutura")
+                            recomendacoes.append("**Capital de Giro Rotativo** - Flexibilidade para operações do dia a dia")
+                            if empresa['Intensidade_B2B'] in ['Alta', 'Muito Alta']:
+                                recomendacoes.append("**Antecipação de Recebíveis** - Melhore seu fluxo de caixa")
+
+                        if empresa['Oportunidade_Credito'] == 'Bronze':
+                            recomendacoes.append("**Capital de Giro de Curto Prazo** - Necessidades pontuais")
+                            recomendacoes.append("**Desconto de Duplicatas** - Liquidez imediata")
+
+                        if empresa['VL_SLDO'] > empresa['VL_FATU'] * 0.1:
+                            recomendacoes.append("**Produtos de Investimento** - Otimize sua reserva financeira")
+                            recomendacoes.append("**CDB Corporativo** - Rentabilidade com liquidez")
+
+                        if empresa['Dependencia_B2B'] == 'Hub de Pagamentos' or empresa['Intensidade_B2B'] in ['Alta', 'Muito Alta']:
+                            recomendacoes.append("**Soluções de Pagamento em Lote** - Automatize seus processos")
+
+                        if recomendacoes:
+                            for rec in recomendacoes:
+                                st.markdown(f"• {rec}")
+                        else:
+                            st.info("Consulte um especialista para produtos adequados ao perfil desta empresa.")
+
+                # --- ANÁLISE COMPARATIVA (se mais de 1 CNPJ) ---
+                if len(empresas_analisadas) > 1:
+                    st.markdown("---")
+                    st.subheader("📊 Análise Comparativa")
+
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+                        st.markdown("##### Faturamento Comparado")
+                        fig = go.Figure(go.Bar(
+                            x=empresas_analisadas['ID'],
+                            y=empresas_analisadas['VL_FATU'],
+                            marker_color=SANTANDER_RED
+                        ))
+                        fig.update_layout(
+                            template="plotly_white",
+                            xaxis_title="",
+                            yaxis_title="Faturamento (R$)",
+                            margin=dict(t=10, l=10, r=10, b=10)
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+
+                    with col2:
+                        st.markdown("##### Distribuição de Risco")
+                        risco_dist = empresas_analisadas['Risco_Santander'].value_counts()
+                        fig = go.Figure(go.Pie(
+                            labels=risco_dist.index,
+                            values=risco_dist.values,
+                            hole=0.3
+                        ))
+                        fig.update_layout(
+                            template="plotly_white",
+                            margin=dict(t=10, l=10, r=10, b=10)
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+
+                    # Insights comparativos
+                    st.markdown("##### Insights Comparativos")
+
+                    melhor_oportunidade = empresas_analisadas.loc[
+                        empresas_analisadas['Oportunidade_Credito'].isin(['Ouro', 'Prata', 'Bronze'])
+                    ].sort_values(
+                        'Oportunidade_Credito',
+                        key=lambda x: x.map({'Ouro': 1, 'Prata': 2, 'Bronze': 3})
+                    ).head(1)
+
+                    if not melhor_oportunidade.empty:
+                        st.success(f"**Melhor Oportunidade**: {melhor_oportunidade.iloc[0]['ID']} (Tier {melhor_oportunidade.iloc[0]['Oportunidade_Credito']})")
+
+                    maior_faturamento = empresas_analisadas.loc[empresas_analisadas['VL_FATU'].idxmax()]
+                    st.info(f"**Maior Faturamento**: {maior_faturamento['ID']} (R$ {maior_faturamento['VL_FATU']:,.0f})")
+
+                    maior_risco = empresas_analisadas[empresas_analisadas['Risco_Santander'].isin(['Alto', 'Muito Alto'])]
+                    if not maior_risco.empty:
+                        st.warning(f"**Atenção**: {len(maior_risco)} empresa(s) com risco Alto/Muito Alto")
+        else:
+            st.warning("Por favor, selecione ao menos um CNPJ válido.")
+
+    elif gerar_insights and not cnpjs_list:
+        st.info("Selecione um ou mais CNPJs para começar a análise.")
