@@ -593,24 +593,40 @@ with st.container(border=True):
 
                     st.markdown("<br>", unsafe_allow_html=True)
 
-                    # Usar tabs para organizar o conteúdo
-                    tab1, tab2, tab3 = st.tabs(["📊 Visão Geral", "💡 Insights", "🎯 Recomendações"])
+                    # Usar tabs para organizar o conteúdo - ordem otimizada para analista de crédito
+                    tab1, tab2, tab3 = st.tabs(["🎯 Recomendações", "💡 Análise de Risco", "📊 Dados Gerais"])
 
                     with tab1:
-                        col_a, col_b = st.columns(2)
-                        with col_a:
-                            with st.container(border=True):
-                                st.markdown("**Perfil da Empresa**")
-                                st.markdown(f"• Maturidade: **{empresa['Maturidade']}**")
-                                st.markdown(f"• Anos de operação: **{empresa['Tempo_Atividade_Anos']}**")
-                                st.markdown(f"• Saúde Financeira: **{empresa['Saude_Financeira']}**")
+                        st.markdown("### Produtos Recomendados")
 
-                        with col_b:
-                            with st.container(border=True):
-                                st.markdown("**Relacionamento B2B**")
-                                st.markdown(f"• Intensidade: **{empresa['Intensidade_B2B']}**")
-                                st.markdown(f"• Dependência: **{empresa['Dependencia_B2B']}**")
-                                st.markdown(f"• Total de Transações: **{int(empresa['Total_Transacoes'])}**")
+                        recomendacoes = []
+
+                        if empresa['Oportunidade_Credito'] in ['Ouro', 'Prata']:
+                            recomendacoes.append(("💼", "Linha de Crédito para Expansão", "Ideal para investimentos em infraestrutura"))
+                            recomendacoes.append(("💰", "Capital de Giro Rotativo", "Flexibilidade para operações do dia a dia"))
+                            if empresa['Intensidade_B2B'] in ['Alta', 'Muito Alta']:
+                                recomendacoes.append(("📈", "Antecipação de Recebíveis", "Melhore seu fluxo de caixa"))
+
+                        if empresa['Oportunidade_Credito'] == 'Bronze':
+                            recomendacoes.append(("💳", "Capital de Giro de Curto Prazo", "Necessidades pontuais"))
+                            recomendacoes.append(("📄", "Desconto de Duplicatas", "Liquidez imediata"))
+
+                        if empresa['VL_SLDO'] > empresa['VL_FATU'] * 0.1:
+                            recomendacoes.append(("💎", "Produtos de Investimento", "Otimize sua reserva financeira"))
+                            recomendacoes.append(("🏦", "CDB Corporativo", "Rentabilidade com liquidez"))
+
+                        if empresa['Dependencia_B2B'] == 'Hub de Pagamentos' or empresa['Intensidade_B2B'] in ['Alta', 'Muito Alta']:
+                            recomendacoes.append(("💸", "Soluções de Pagamento em Lote", "Automatize seus processos"))
+
+                        if recomendacoes:
+                            col_rec1, col_rec2 = st.columns(2)
+                            for idx, (icon, titulo, descricao) in enumerate(recomendacoes):
+                                with (col_rec1 if idx % 2 == 0 else col_rec2):
+                                    with st.container(border=True):
+                                        st.markdown(f"### {icon} {titulo}")
+                                        st.markdown(descricao)
+                        else:
+                            st.info("Consulte um especialista para produtos adequados ao perfil desta empresa.")
 
                     with tab2:
                         st.markdown("### Análise Detalhada")
@@ -670,36 +686,20 @@ with st.container(border=True):
                                 st.markdown(descricao)
 
                     with tab3:
-                        st.markdown("### Produtos Recomendados")
+                        col_a, col_b = st.columns(2)
+                        with col_a:
+                            with st.container(border=True):
+                                st.markdown("**Perfil da Empresa**")
+                                st.markdown(f"• Maturidade: **{empresa['Maturidade']}**")
+                                st.markdown(f"• Anos de operação: **{empresa['Tempo_Atividade_Anos']}**")
+                                st.markdown(f"• Saúde Financeira: **{empresa['Saude_Financeira']}**")
 
-                        recomendacoes = []
-
-                        if empresa['Oportunidade_Credito'] in ['Ouro', 'Prata']:
-                            recomendacoes.append(("💼", "Linha de Crédito para Expansão", "Ideal para investimentos em infraestrutura"))
-                            recomendacoes.append(("💰", "Capital de Giro Rotativo", "Flexibilidade para operações do dia a dia"))
-                            if empresa['Intensidade_B2B'] in ['Alta', 'Muito Alta']:
-                                recomendacoes.append(("📈", "Antecipação de Recebíveis", "Melhore seu fluxo de caixa"))
-
-                        if empresa['Oportunidade_Credito'] == 'Bronze':
-                            recomendacoes.append(("💳", "Capital de Giro de Curto Prazo", "Necessidades pontuais"))
-                            recomendacoes.append(("📄", "Desconto de Duplicatas", "Liquidez imediata"))
-
-                        if empresa['VL_SLDO'] > empresa['VL_FATU'] * 0.1:
-                            recomendacoes.append(("💎", "Produtos de Investimento", "Otimize sua reserva financeira"))
-                            recomendacoes.append(("🏦", "CDB Corporativo", "Rentabilidade com liquidez"))
-
-                        if empresa['Dependencia_B2B'] == 'Hub de Pagamentos' or empresa['Intensidade_B2B'] in ['Alta', 'Muito Alta']:
-                            recomendacoes.append(("💸", "Soluções de Pagamento em Lote", "Automatize seus processos"))
-
-                        if recomendacoes:
-                            col_rec1, col_rec2 = st.columns(2)
-                            for idx, (icon, titulo, descricao) in enumerate(recomendacoes):
-                                with (col_rec1 if idx % 2 == 0 else col_rec2):
-                                    with st.container(border=True):
-                                        st.markdown(f"### {icon} {titulo}")
-                                        st.markdown(descricao)
-                        else:
-                            st.info("Consulte um especialista para produtos adequados ao perfil desta empresa.")
+                        with col_b:
+                            with st.container(border=True):
+                                st.markdown("**Relacionamento B2B**")
+                                st.markdown(f"• Intensidade: **{empresa['Intensidade_B2B']}**")
+                                st.markdown(f"• Dependência: **{empresa['Dependencia_B2B']}**")
+                                st.markdown(f"• Total de Transações: **{int(empresa['Total_Transacoes'])}**")
 
                 else:
                     # Se forem múltiplas empresas, usar tabs por empresa
@@ -725,24 +725,40 @@ with st.container(border=True):
 
                             st.markdown("<br>", unsafe_allow_html=True)
 
-                            # Subtabs dentro de cada empresa
-                            subtab1, subtab2, subtab3 = st.tabs(["📊 Visão Geral", "💡 Insights", "🎯 Recomendações"])
+                            # Subtabs dentro de cada empresa - ordem otimizada para analista de crédito
+                            subtab1, subtab2, subtab3 = st.tabs(["🎯 Recomendações", "💡 Análise de Risco", "📊 Dados Gerais"])
 
                             with subtab1:
-                                col_a, col_b = st.columns(2)
-                                with col_a:
-                                    with st.container(border=True):
-                                        st.markdown("**Perfil da Empresa**")
-                                        st.markdown(f"• Maturidade: **{empresa['Maturidade']}**")
-                                        st.markdown(f"• Anos de operação: **{empresa['Tempo_Atividade_Anos']}**")
-                                        st.markdown(f"• Saúde Financeira: **{empresa['Saude_Financeira']}**")
+                                st.markdown("### Produtos Recomendados")
 
-                                with col_b:
-                                    with st.container(border=True):
-                                        st.markdown("**Relacionamento B2B**")
-                                        st.markdown(f"• Intensidade: **{empresa['Intensidade_B2B']}**")
-                                        st.markdown(f"• Dependência: **{empresa['Dependencia_B2B']}**")
-                                        st.markdown(f"• Total de Transações: **{int(empresa['Total_Transacoes'])}**")
+                                recomendacoes = []
+
+                                if empresa['Oportunidade_Credito'] in ['Ouro', 'Prata']:
+                                    recomendacoes.append(("💼", "Linha de Crédito para Expansão", "Ideal para investimentos em infraestrutura"))
+                                    recomendacoes.append(("💰", "Capital de Giro Rotativo", "Flexibilidade para operações do dia a dia"))
+                                    if empresa['Intensidade_B2B'] in ['Alta', 'Muito Alta']:
+                                        recomendacoes.append(("📈", "Antecipação de Recebíveis", "Melhore seu fluxo de caixa"))
+
+                                if empresa['Oportunidade_Credito'] == 'Bronze':
+                                    recomendacoes.append(("💳", "Capital de Giro de Curto Prazo", "Necessidades pontuais"))
+                                    recomendacoes.append(("📄", "Desconto de Duplicatas", "Liquidez imediata"))
+
+                                if empresa['VL_SLDO'] > empresa['VL_FATU'] * 0.1:
+                                    recomendacoes.append(("💎", "Produtos de Investimento", "Otimize sua reserva financeira"))
+                                    recomendacoes.append(("🏦", "CDB Corporativo", "Rentabilidade com liquidez"))
+
+                                if empresa['Dependencia_B2B'] == 'Hub de Pagamentos' or empresa['Intensidade_B2B'] in ['Alta', 'Muito Alta']:
+                                    recomendacoes.append(("💸", "Soluções de Pagamento em Lote", "Automatize seus processos"))
+
+                                if recomendacoes:
+                                    col_rec1, col_rec2 = st.columns(2)
+                                    for idx_rec, (icon, titulo, descricao) in enumerate(recomendacoes):
+                                        with (col_rec1 if idx_rec % 2 == 0 else col_rec2):
+                                            with st.container(border=True):
+                                                st.markdown(f"### {icon} {titulo}")
+                                                st.markdown(descricao)
+                                else:
+                                    st.info("Consulte um especialista para produtos adequados ao perfil desta empresa.")
 
                             with subtab2:
                                 st.markdown("### Análise Detalhada")
@@ -796,36 +812,20 @@ with st.container(border=True):
                                         st.markdown(descricao)
 
                             with subtab3:
-                                st.markdown("### Produtos Recomendados")
+                                col_a, col_b = st.columns(2)
+                                with col_a:
+                                    with st.container(border=True):
+                                        st.markdown("**Perfil da Empresa**")
+                                        st.markdown(f"• Maturidade: **{empresa['Maturidade']}**")
+                                        st.markdown(f"• Anos de operação: **{empresa['Tempo_Atividade_Anos']}**")
+                                        st.markdown(f"• Saúde Financeira: **{empresa['Saude_Financeira']}**")
 
-                                recomendacoes = []
-
-                                if empresa['Oportunidade_Credito'] in ['Ouro', 'Prata']:
-                                    recomendacoes.append(("💼", "Linha de Crédito para Expansão", "Ideal para investimentos em infraestrutura"))
-                                    recomendacoes.append(("💰", "Capital de Giro Rotativo", "Flexibilidade para operações do dia a dia"))
-                                    if empresa['Intensidade_B2B'] in ['Alta', 'Muito Alta']:
-                                        recomendacoes.append(("📈", "Antecipação de Recebíveis", "Melhore seu fluxo de caixa"))
-
-                                if empresa['Oportunidade_Credito'] == 'Bronze':
-                                    recomendacoes.append(("💳", "Capital de Giro de Curto Prazo", "Necessidades pontuais"))
-                                    recomendacoes.append(("📄", "Desconto de Duplicatas", "Liquidez imediata"))
-
-                                if empresa['VL_SLDO'] > empresa['VL_FATU'] * 0.1:
-                                    recomendacoes.append(("💎", "Produtos de Investimento", "Otimize sua reserva financeira"))
-                                    recomendacoes.append(("🏦", "CDB Corporativo", "Rentabilidade com liquidez"))
-
-                                if empresa['Dependencia_B2B'] == 'Hub de Pagamentos' or empresa['Intensidade_B2B'] in ['Alta', 'Muito Alta']:
-                                    recomendacoes.append(("💸", "Soluções de Pagamento em Lote", "Automatize seus processos"))
-
-                                if recomendacoes:
-                                    col_rec1, col_rec2 = st.columns(2)
-                                    for idx_rec, (icon, titulo, descricao) in enumerate(recomendacoes):
-                                        with (col_rec1 if idx_rec % 2 == 0 else col_rec2):
-                                            with st.container(border=True):
-                                                st.markdown(f"### {icon} {titulo}")
-                                                st.markdown(descricao)
-                                else:
-                                    st.info("Consulte um especialista para produtos adequados ao perfil desta empresa.")
+                                with col_b:
+                                    with st.container(border=True):
+                                        st.markdown("**Relacionamento B2B**")
+                                        st.markdown(f"• Intensidade: **{empresa['Intensidade_B2B']}**")
+                                        st.markdown(f"• Dependência: **{empresa['Dependencia_B2B']}**")
+                                        st.markdown(f"• Total de Transações: **{int(empresa['Total_Transacoes'])}**")
 
                 # --- ANÁLISE COMPARATIVA (se mais de 1 CNPJ) ---
                 if len(empresas_analisadas) > 1:
