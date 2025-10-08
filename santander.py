@@ -569,119 +569,263 @@ with st.container(border=True):
             else:
                 st.success(f"✅ {len(empresas_analisadas)} empresa(s) encontrada(s)")
 
-                # --- INSIGHTS INDIVIDUAIS ---
-                for idx, (_, empresa) in enumerate(empresas_analisadas.iterrows()):
-                    with st.expander(f"📊 **{empresa['ID']}** - {empresa['DS_CNAE']}", expanded=(idx==0)):
-                        col1, col2, col3 = st.columns(3)
+                # --- TABS PARA MÚLTIPLAS EMPRESAS ---
+                if len(empresas_analisadas) == 1:
+                    # Se for apenas 1 empresa, mostrar direto sem tabs
+                    empresa = empresas_analisadas.iloc[0]
 
-                        with col1:
-                            st.metric("Faturamento", f"R$ {empresa['VL_FATU']:,.0f}")
-                            st.metric("Saldo", f"R$ {empresa['VL_SLDO']:,.0f}")
+                    # Cabeçalho da empresa
+                    st.markdown(f"### {empresa['ID']}")
+                    st.caption(f"**Setor:** {empresa['DS_CNAE']}")
+                    st.markdown("<br>", unsafe_allow_html=True)
 
-                        with col2:
-                            oport_color = COLOR_OPORTUNIDADE.get(empresa['Oportunidade_Credito'], {'bg': '#E0E0E0', 'text': '#000000'})
-                            st.markdown(f"**Oportunidade:** <span style='background-color: {oport_color['bg']}; color: {oport_color['text']}; padding: 3px 10px; border-radius: 5px;'>{empresa['Oportunidade_Credito']}</span>", unsafe_allow_html=True)
-                            st.metric("Risco", empresa['Risco_Santander'])
+                    # Métricas principais em cards
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Faturamento", f"R$ {empresa['VL_FATU']:,.0f}")
+                    with col2:
+                        st.metric("Saldo", f"R$ {empresa['VL_SLDO']:,.0f}")
+                    with col3:
+                        st.metric("Risco", empresa['Risco_Santander'])
+                    with col4:
+                        oport_color = COLOR_OPORTUNIDADE.get(empresa['Oportunidade_Credito'], {'bg': '#E0E0E0', 'text': '#000000'})
+                        st.markdown(f"<div style='text-align: center;'><small>Oportunidade</small><br><span style='background-color: {oport_color['bg']}; color: {oport_color['text']}; padding: 5px 15px; border-radius: 8px; font-weight: 600; display: inline-block; margin-top: 5px;'>{empresa['Oportunidade_Credito']}</span></div>", unsafe_allow_html=True)
 
-                        with col3:
-                            st.metric("Anos de Atividade", f"{empresa['Tempo_Atividade_Anos']}")
-                            st.metric("Maturidade", empresa['Maturidade'])
+                    st.markdown("<br>", unsafe_allow_html=True)
 
-                        # INSIGHTS TEXTUAIS
-                        st.markdown("---")
-                        st.markdown("#### Insights Automáticos")
+                    # Usar tabs para organizar o conteúdo
+                    tab1, tab2, tab3 = st.tabs(["📊 Visão Geral", "💡 Insights", "🎯 Recomendações"])
+
+                    with tab1:
+                        col_a, col_b = st.columns(2)
+                        with col_a:
+                            with st.container(border=True):
+                                st.markdown("**Perfil da Empresa**")
+                                st.markdown(f"• Maturidade: **{empresa['Maturidade']}**")
+                                st.markdown(f"• Anos de operação: **{empresa['Tempo_Atividade_Anos']}**")
+                                st.markdown(f"• Saúde Financeira: **{empresa['Saude_Financeira']}**")
+
+                        with col_b:
+                            with st.container(border=True):
+                                st.markdown("**Relacionamento B2B**")
+                                st.markdown(f"• Intensidade: **{empresa['Intensidade_B2B']}**")
+                                st.markdown(f"• Dependência: **{empresa['Dependencia_B2B']}**")
+                                st.markdown(f"• Total de Transações: **{int(empresa['Total_Transacoes'])}**")
+
+                    with tab2:
+                        st.markdown("### Análise Detalhada")
 
                         insights = []
 
                         # Insight 1: Saúde Financeira
                         if empresa['Saude_Financeira'] == 'Saudável':
-                            insights.append("**Situação Positiva**: Empresa com saldo positivo, demonstrando boa gestão de caixa.")
+                            insights.append(("✅", "Situação Positiva", "Empresa com saldo positivo, demonstrando boa gestão de caixa."))
                         elif empresa['Saude_Financeira'] == 'Alavancagem Estratégica':
-                            insights.append("**Alavancagem Controlada**: Dívida inferior a 5% do faturamento, indicando uso estratégico de crédito.")
+                            insights.append(("📊", "Alavancagem Controlada", "Dívida inferior a 5% do faturamento, indicando uso estratégico de crédito."))
                         elif empresa['Saude_Financeira'] == 'Ponto de Atenção':
-                            insights.append("**Atenção Necessária**: Dívida entre 5-10% do faturamento. Monitoramento recomendado.")
+                            insights.append(("⚠️", "Atenção Necessária", "Dívida entre 5-10% do faturamento. Monitoramento recomendado."))
                         else:
-                            insights.append("**Risco Elevado**: Dívida superior a 10% do faturamento ou faturamento crítico.")
+                            insights.append(("🔴", "Risco Elevado", "Dívida superior a 10% do faturamento ou faturamento crítico."))
 
                         # Insight 2: Maturidade
                         if empresa['Maturidade'] == 'Madura':
-                            insights.append(f"**Empresa Consolidada**: Com {empresa['Tempo_Atividade_Anos']} anos de operação, demonstra estabilidade no mercado.")
+                            insights.append(("🏢", "Empresa Consolidada", f"Com {empresa['Tempo_Atividade_Anos']} anos de operação, demonstra estabilidade no mercado."))
                         else:
-                            insights.append(f"**Empresa em Crescimento**: Com {empresa['Tempo_Atividade_Anos']} anos, está em fase de expansão.")
+                            insights.append(("🌱", "Empresa em Crescimento", f"Com {empresa['Tempo_Atividade_Anos']} anos, está em fase de expansão."))
 
                         # Insight 3: Dependência B2B
                         if empresa['Dependencia_B2B'] == 'Hub de Pagamentos':
-                            insights.append("**Hub de Pagamentos**: Realiza muitos pagamentos mas recebe pouco. Pode ser uma distribuidora ou empresa com alta dependência de fornecedores.")
+                            insights.append(("💸", "Hub de Pagamentos", "Realiza muitos pagamentos mas recebe pouco. Pode ser uma distribuidora ou empresa com alta dependência de fornecedores."))
                         elif empresa['Dependencia_B2B'] == 'Concentradora de Recebimentos':
-                            insights.append("**Concentradora de Receitas**: Recebe muito mas paga pouco. Pode ser uma varejista ou prestadora de serviços com muitos clientes finais.")
+                            insights.append(("💰", "Concentradora de Receitas", "Recebe muito mas paga pouco. Pode ser uma varejista ou prestadora de serviços com muitos clientes finais."))
                         elif empresa['Dependencia_B2B'] == 'Alta Concentração em Clientes':
-                            insights.append("**Alta Dependência de Clientes**: Forte concentração em recebimentos. Risco de dependência de poucos clientes.")
+                            insights.append(("📊", "Alta Dependência de Clientes", "Forte concentração em recebimentos. Risco de dependência de poucos clientes."))
                         elif empresa['Dependencia_B2B'] == 'Alta Concentração em Fornecedores':
-                            insights.append("**Alta Dependência de Fornecedores**: Forte concentração em pagamentos. Risco de dependência de poucos fornecedores.")
+                            insights.append(("🏭", "Alta Dependência de Fornecedores", "Forte concentração em pagamentos. Risco de dependência de poucos fornecedores."))
                         elif empresa['Dependencia_B2B'] == 'Relacionamento Equilibrado':
-                            insights.append("**Cadeia Balanceada**: Equilíbrio saudável entre pagamentos e recebimentos.")
+                            insights.append(("⚖️", "Cadeia Balanceada", "Equilíbrio saudável entre pagamentos e recebimentos."))
 
-                        # Insight 4: Intensidade B2B
-                        intensidade_msg = {
-                            'Muito Alta': '**Rede B2B Muito Ativa**: Empresa com alto volume de transações B2B.',
-                            'Alta': '**Rede B2B Ativa**: Boa intensidade de transações comerciais.',
-                            'Média': '**Atividade B2B Moderada**: Volume médio de transações.',
-                            'Baixa': '**Atividade B2B Limitada**: Poucas transações B2B registradas.',
-                            'Muito Baixa': '**Atividade B2B Mínima**: Volume muito baixo de transações.'
-                        }
-                        if empresa['Intensidade_B2B'] in intensidade_msg:
-                            insights.append(intensidade_msg[empresa['Intensidade_B2B']])
-
-                        # Insight 5: Oportunidade de Crédito
+                        # Insight 4: Oportunidade de Crédito
                         if empresa['Oportunidade_Credito'] == 'Ouro':
-                            insights.append("**Excelente Oportunidade**: Cliente ideal para produtos de crédito premium, expansão e investimentos.")
+                            insights.append(("🥇", "Excelente Oportunidade", "Cliente ideal para produtos de crédito premium, expansão e investimentos."))
                         elif empresa['Oportunidade_Credito'] == 'Prata':
-                            insights.append("**Boa Oportunidade**: Cliente adequado para capital de giro e financiamentos estruturados.")
+                            insights.append(("🥈", "Boa Oportunidade", "Cliente adequado para capital de giro e financiamentos estruturados."))
                         elif empresa['Oportunidade_Credito'] == 'Bronze':
-                            insights.append("**Oportunidade Pontual**: Cliente com necessidade de capital de curto prazo ou produtos específicos.")
+                            insights.append(("🥉", "Oportunidade Pontual", "Cliente com necessidade de capital de curto prazo ou produtos específicos."))
                         else:
-                            insights.append("**Não Elegível**: Cliente requer análise mais profunda ou reestruturação antes de novos créditos.")
+                            insights.append(("⛔", "Não Elegível", "Cliente requer análise mais profunda ou reestruturação antes de novos créditos."))
 
-                        # Insight 6: Análise de Fluxo de Caixa
+                        # Insight 5: Análise de Fluxo de Caixa
                         if empresa['VL_SLDO'] < 0 and empresa['VL_FATU'] > 0:
                             proporcao = abs(empresa['VL_SLDO']) / empresa['VL_FATU'] * 100
-                            insights.append(f"**Análise de Caixa**: Saldo negativo representa {proporcao:.1f}% do faturamento anual.")
+                            insights.append(("💳", "Análise de Caixa", f"Saldo negativo representa {proporcao:.1f}% do faturamento anual."))
                         elif empresa['VL_SLDO'] > 0:
                             proporcao = empresa['VL_SLDO'] / empresa['VL_FATU'] * 100 if empresa['VL_FATU'] > 0 else 0
-                            insights.append(f"**Reserva Saudável**: Saldo positivo equivale a {proporcao:.1f}% do faturamento anual.")
+                            insights.append(("💰", "Reserva Saudável", f"Saldo positivo equivale a {proporcao:.1f}% do faturamento anual."))
 
-                        # Exibir insights
-                        for insight in insights:
-                            st.markdown(f"• {insight}")
+                        # Exibir insights em cards
+                        for icon, titulo, descricao in insights:
+                            with st.container(border=True):
+                                st.markdown(f"### {icon} {titulo}")
+                                st.markdown(descricao)
 
-                        # RECOMENDAÇÕES
-                        st.markdown("---")
-                        st.markdown("#### Recomendações de Produtos")
+                    with tab3:
+                        st.markdown("### Produtos Recomendados")
 
                         recomendacoes = []
 
                         if empresa['Oportunidade_Credito'] in ['Ouro', 'Prata']:
-                            recomendacoes.append("**Linha de Crédito para Expansão** - Ideal para investimentos em infraestrutura")
-                            recomendacoes.append("**Capital de Giro Rotativo** - Flexibilidade para operações do dia a dia")
+                            recomendacoes.append(("💼", "Linha de Crédito para Expansão", "Ideal para investimentos em infraestrutura"))
+                            recomendacoes.append(("💰", "Capital de Giro Rotativo", "Flexibilidade para operações do dia a dia"))
                             if empresa['Intensidade_B2B'] in ['Alta', 'Muito Alta']:
-                                recomendacoes.append("**Antecipação de Recebíveis** - Melhore seu fluxo de caixa")
+                                recomendacoes.append(("📈", "Antecipação de Recebíveis", "Melhore seu fluxo de caixa"))
 
                         if empresa['Oportunidade_Credito'] == 'Bronze':
-                            recomendacoes.append("**Capital de Giro de Curto Prazo** - Necessidades pontuais")
-                            recomendacoes.append("**Desconto de Duplicatas** - Liquidez imediata")
+                            recomendacoes.append(("💳", "Capital de Giro de Curto Prazo", "Necessidades pontuais"))
+                            recomendacoes.append(("📄", "Desconto de Duplicatas", "Liquidez imediata"))
 
                         if empresa['VL_SLDO'] > empresa['VL_FATU'] * 0.1:
-                            recomendacoes.append("**Produtos de Investimento** - Otimize sua reserva financeira")
-                            recomendacoes.append("**CDB Corporativo** - Rentabilidade com liquidez")
+                            recomendacoes.append(("💎", "Produtos de Investimento", "Otimize sua reserva financeira"))
+                            recomendacoes.append(("🏦", "CDB Corporativo", "Rentabilidade com liquidez"))
 
                         if empresa['Dependencia_B2B'] == 'Hub de Pagamentos' or empresa['Intensidade_B2B'] in ['Alta', 'Muito Alta']:
-                            recomendacoes.append("**Soluções de Pagamento em Lote** - Automatize seus processos")
+                            recomendacoes.append(("💸", "Soluções de Pagamento em Lote", "Automatize seus processos"))
 
                         if recomendacoes:
-                            for rec in recomendacoes:
-                                st.markdown(f"• {rec}")
+                            col_rec1, col_rec2 = st.columns(2)
+                            for idx, (icon, titulo, descricao) in enumerate(recomendacoes):
+                                with (col_rec1 if idx % 2 == 0 else col_rec2):
+                                    with st.container(border=True):
+                                        st.markdown(f"### {icon} {titulo}")
+                                        st.markdown(descricao)
                         else:
                             st.info("Consulte um especialista para produtos adequados ao perfil desta empresa.")
+
+                else:
+                    # Se forem múltiplas empresas, usar tabs por empresa
+                    tabs = st.tabs([f"{emp['ID']}" for _, emp in empresas_analisadas.iterrows()])
+
+                    for tab_idx, (idx, empresa) in enumerate(empresas_analisadas.iterrows()):
+                        with tabs[tab_idx]:
+                            # Cabeçalho da empresa
+                            st.caption(f"**Setor:** {empresa['DS_CNAE']}")
+                            st.markdown("<br>", unsafe_allow_html=True)
+
+                            # Métricas principais em cards
+                            col1, col2, col3, col4 = st.columns(4)
+                            with col1:
+                                st.metric("Faturamento", f"R$ {empresa['VL_FATU']:,.0f}")
+                            with col2:
+                                st.metric("Saldo", f"R$ {empresa['VL_SLDO']:,.0f}")
+                            with col3:
+                                st.metric("Risco", empresa['Risco_Santander'])
+                            with col4:
+                                oport_color = COLOR_OPORTUNIDADE.get(empresa['Oportunidade_Credito'], {'bg': '#E0E0E0', 'text': '#000000'})
+                                st.markdown(f"<div style='text-align: center;'><small>Oportunidade</small><br><span style='background-color: {oport_color['bg']}; color: {oport_color['text']}; padding: 5px 15px; border-radius: 8px; font-weight: 600; display: inline-block; margin-top: 5px;'>{empresa['Oportunidade_Credito']}</span></div>", unsafe_allow_html=True)
+
+                            st.markdown("<br>", unsafe_allow_html=True)
+
+                            # Subtabs dentro de cada empresa
+                            subtab1, subtab2, subtab3 = st.tabs(["📊 Visão Geral", "💡 Insights", "🎯 Recomendações"])
+
+                            with subtab1:
+                                col_a, col_b = st.columns(2)
+                                with col_a:
+                                    with st.container(border=True):
+                                        st.markdown("**Perfil da Empresa**")
+                                        st.markdown(f"• Maturidade: **{empresa['Maturidade']}**")
+                                        st.markdown(f"• Anos de operação: **{empresa['Tempo_Atividade_Anos']}**")
+                                        st.markdown(f"• Saúde Financeira: **{empresa['Saude_Financeira']}**")
+
+                                with col_b:
+                                    with st.container(border=True):
+                                        st.markdown("**Relacionamento B2B**")
+                                        st.markdown(f"• Intensidade: **{empresa['Intensidade_B2B']}**")
+                                        st.markdown(f"• Dependência: **{empresa['Dependencia_B2B']}**")
+                                        st.markdown(f"• Total de Transações: **{int(empresa['Total_Transacoes'])}**")
+
+                            with subtab2:
+                                st.markdown("### Análise Detalhada")
+
+                                insights = []
+
+                                if empresa['Saude_Financeira'] == 'Saudável':
+                                    insights.append(("✅", "Situação Positiva", "Empresa com saldo positivo, demonstrando boa gestão de caixa."))
+                                elif empresa['Saude_Financeira'] == 'Alavancagem Estratégica':
+                                    insights.append(("📊", "Alavancagem Controlada", "Dívida inferior a 5% do faturamento, indicando uso estratégico de crédito."))
+                                elif empresa['Saude_Financeira'] == 'Ponto de Atenção':
+                                    insights.append(("⚠️", "Atenção Necessária", "Dívida entre 5-10% do faturamento. Monitoramento recomendado."))
+                                else:
+                                    insights.append(("🔴", "Risco Elevado", "Dívida superior a 10% do faturamento ou faturamento crítico."))
+
+                                if empresa['Maturidade'] == 'Madura':
+                                    insights.append(("🏢", "Empresa Consolidada", f"Com {empresa['Tempo_Atividade_Anos']} anos de operação, demonstra estabilidade no mercado."))
+                                else:
+                                    insights.append(("🌱", "Empresa em Crescimento", f"Com {empresa['Tempo_Atividade_Anos']} anos, está em fase de expansão."))
+
+                                if empresa['Dependencia_B2B'] == 'Hub de Pagamentos':
+                                    insights.append(("💸", "Hub de Pagamentos", "Realiza muitos pagamentos mas recebe pouco. Pode ser uma distribuidora ou empresa com alta dependência de fornecedores."))
+                                elif empresa['Dependencia_B2B'] == 'Concentradora de Recebimentos':
+                                    insights.append(("💰", "Concentradora de Receitas", "Recebe muito mas paga pouco. Pode ser uma varejista ou prestadora de serviços com muitos clientes finais."))
+                                elif empresa['Dependencia_B2B'] == 'Alta Concentração em Clientes':
+                                    insights.append(("📊", "Alta Dependência de Clientes", "Forte concentração em recebimentos. Risco de dependência de poucos clientes."))
+                                elif empresa['Dependencia_B2B'] == 'Alta Concentração em Fornecedores':
+                                    insights.append(("🏭", "Alta Dependência de Fornecedores", "Forte concentração em pagamentos. Risco de dependência de poucos fornecedores."))
+                                elif empresa['Dependencia_B2B'] == 'Relacionamento Equilibrado':
+                                    insights.append(("⚖️", "Cadeia Balanceada", "Equilíbrio saudável entre pagamentos e recebimentos."))
+
+                                if empresa['Oportunidade_Credito'] == 'Ouro':
+                                    insights.append(("🥇", "Excelente Oportunidade", "Cliente ideal para produtos de crédito premium, expansão e investimentos."))
+                                elif empresa['Oportunidade_Credito'] == 'Prata':
+                                    insights.append(("🥈", "Boa Oportunidade", "Cliente adequado para capital de giro e financiamentos estruturados."))
+                                elif empresa['Oportunidade_Credito'] == 'Bronze':
+                                    insights.append(("🥉", "Oportunidade Pontual", "Cliente com necessidade de capital de curto prazo ou produtos específicos."))
+                                else:
+                                    insights.append(("⛔", "Não Elegível", "Cliente requer análise mais profunda ou reestruturação antes de novos créditos."))
+
+                                if empresa['VL_SLDO'] < 0 and empresa['VL_FATU'] > 0:
+                                    proporcao = abs(empresa['VL_SLDO']) / empresa['VL_FATU'] * 100
+                                    insights.append(("💳", "Análise de Caixa", f"Saldo negativo representa {proporcao:.1f}% do faturamento anual."))
+                                elif empresa['VL_SLDO'] > 0:
+                                    proporcao = empresa['VL_SLDO'] / empresa['VL_FATU'] * 100 if empresa['VL_FATU'] > 0 else 0
+                                    insights.append(("💰", "Reserva Saudável", f"Saldo positivo equivale a {proporcao:.1f}% do faturamento anual."))
+
+                                for icon, titulo, descricao in insights:
+                                    with st.container(border=True):
+                                        st.markdown(f"### {icon} {titulo}")
+                                        st.markdown(descricao)
+
+                            with subtab3:
+                                st.markdown("### Produtos Recomendados")
+
+                                recomendacoes = []
+
+                                if empresa['Oportunidade_Credito'] in ['Ouro', 'Prata']:
+                                    recomendacoes.append(("💼", "Linha de Crédito para Expansão", "Ideal para investimentos em infraestrutura"))
+                                    recomendacoes.append(("💰", "Capital de Giro Rotativo", "Flexibilidade para operações do dia a dia"))
+                                    if empresa['Intensidade_B2B'] in ['Alta', 'Muito Alta']:
+                                        recomendacoes.append(("📈", "Antecipação de Recebíveis", "Melhore seu fluxo de caixa"))
+
+                                if empresa['Oportunidade_Credito'] == 'Bronze':
+                                    recomendacoes.append(("💳", "Capital de Giro de Curto Prazo", "Necessidades pontuais"))
+                                    recomendacoes.append(("📄", "Desconto de Duplicatas", "Liquidez imediata"))
+
+                                if empresa['VL_SLDO'] > empresa['VL_FATU'] * 0.1:
+                                    recomendacoes.append(("💎", "Produtos de Investimento", "Otimize sua reserva financeira"))
+                                    recomendacoes.append(("🏦", "CDB Corporativo", "Rentabilidade com liquidez"))
+
+                                if empresa['Dependencia_B2B'] == 'Hub de Pagamentos' or empresa['Intensidade_B2B'] in ['Alta', 'Muito Alta']:
+                                    recomendacoes.append(("💸", "Soluções de Pagamento em Lote", "Automatize seus processos"))
+
+                                if recomendacoes:
+                                    col_rec1, col_rec2 = st.columns(2)
+                                    for idx_rec, (icon, titulo, descricao) in enumerate(recomendacoes):
+                                        with (col_rec1 if idx_rec % 2 == 0 else col_rec2):
+                                            with st.container(border=True):
+                                                st.markdown(f"### {icon} {titulo}")
+                                                st.markdown(descricao)
+                                else:
+                                    st.info("Consulte um especialista para produtos adequados ao perfil desta empresa.")
 
                 # --- ANÁLISE COMPARATIVA (se mais de 1 CNPJ) ---
                 if len(empresas_analisadas) > 1:
