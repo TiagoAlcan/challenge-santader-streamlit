@@ -1,7 +1,3 @@
-Claro\! Aqui está um documento `README.md` completo e bem estruturado para a documentação do seu projeto. Ele foi escrito em Markdown e inclui todas as seções essenciais, como visão geral, tecnologias, instalação e como executar o dashboard.
-
------
-
 # Dashboard de Risco e Oportunidades de Clientes PJ
 
 ## Visão Geral
